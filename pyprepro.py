@@ -2,6 +2,7 @@
 
 import os
 import re
+import sys
 import glob
 
 from os.path import join as path_join
@@ -26,8 +27,18 @@ build_filename = './build.ninja'
 
 def get_build_edge_preamble(path):
     with open(path, "rb") as f:
-        head = f.read(512).decode('utf-8')
+        try:
+            head = f.read(512).decode('utf-8')
+        except UnicodeDecodeError:
+            return None
         return head
+
+def get_in_files_from_preamble_in_line(in_line):
+    file_list = []
+    for entry in in_line.split():
+        file_list.extend(glob.glob(entry))
+
+    return file_list
 
 #
 # generate ninja.build
@@ -46,6 +57,8 @@ print("\n# end rules\n", file=f)
 #
 scannable_files = []
 for root, dirs, files in os.walk("./"):
+    if root.startswith('./.git'):
+        continue
     for file in files:
         if file[0] != '.':
             scannable_files.append(path_join(root, file))
@@ -53,8 +66,13 @@ for root, dirs, files in os.walk("./"):
 re_preamble_keyvalue= re.compile(r'-\|-\s(.+?):\s*(.+)')
 
 
+#
+# scan
+#
 for path in scannable_files:
     head = get_build_edge_preamble(path)
+    if head == None:
+        continue
 
     # this file has a build edge preamble
     if MAGIC_STR in head:
@@ -72,7 +90,8 @@ for path in scannable_files:
             continue
 
         # generate build edge for this file's preamble
-        print(f"build {path}: {preamble['rule']} {preamble['in']}", file=f)
+        in_files = get_in_files_from_preamble_in_line(preamble['in'])
+        print(f"build {path}: {preamble['rule']} {' '.join(in_files)} | {build_filename}", file=f)
 
 
 f.close()
