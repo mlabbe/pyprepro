@@ -49,6 +49,10 @@ def get_in_files_from_preamble_in_line(in_line, root_dir, out_dir):
         else:
             glob_path = path_join(out_dir, entry)
 
+        globbed_paths = glob.glob(glob_path)
+        if len(globbed_paths) == 0:
+            fatal("glob_path resulted in no files: %s" % glob_path)
+
         for path in glob.glob(glob_path):
             relative_path = resolve_relative_path(root_dir, path)
             file_list.append(relative_path)
@@ -116,6 +120,9 @@ re_preamble_keyvalue= re.compile(r'-\|-\s(.+?):\s*(.+)')
 #
 for path in scannable_files:
     out_dir = os.path.dirname(path)
+    if path.startswith('./'):
+        path = path[2:]
+
     head = get_build_edge_preamble(path)
     if head == None:
         continue
@@ -145,7 +152,7 @@ for path in scannable_files:
         # create ninja build variables out of any other build spec
         # lines not used above
         for var_line in sorted(preamble.keys()):
-            if var_line in ('build_edge', 'rule', 'in'): continue
+            if var_line in ('build-edge', 'rule', 'in'): continue
 
             if preamble['rule'] == 'tpl' and var_line == 'vars': continue
 
@@ -168,7 +175,13 @@ for path in scannable_files:
 
                 relative_var_file = resolve_relative_path(root_dir, vars_path)
                 if relative_var_file == None:
+                    # possibly we want files not under build root in the future? seems
+                    # janky.
                     fatal("%s tpl has a var not under build root: %s" % (path, vars_file))
+
+                if not os.path.isfile(relative_var_file):
+                    fatal("%s tpl var file not found: %s" % (path, vars_file))
+
 
                 # vars files needs --vars for each one
                 var_line += ' --input-vars ' + relative_var_file
