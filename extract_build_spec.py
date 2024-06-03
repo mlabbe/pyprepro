@@ -49,23 +49,35 @@ def _get_stream(args):
         return sys.stdin
 
 def _main(args):
+    stream = _get_stream(args)
+
     if args.detect_only:
-        if detect_build_spec(_get_stream(args)):
+        if detect_build_spec(stream):
             sys.exit(0)
         else:
             sys.exit(1)
 
-    header = extract_build_spec(_get_stream(args))
+    header = extract_build_spec(stream)
     if header == '':
         print("no build specification found", file=sys.stderr)
         sys.exit(1)
-    print(header, end='')
-    sys.exit(0)
+
+    if not args.clip:
+        print(header, end='')
+        sys.exit(0)
+    else:
+        if not args.file:
+            print("--clip requires file input, not stdin", file=sys.stderr)
+            sys.exit(1)
+        stream.close()
+        with open(args.file, 'w') as f:
+            f.write(header)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Extract header including build spec from stream or file")
     parser.add_argument('file', nargs='?', help="The file to process. If not provided, stdin will be used.")
     parser.add_argument('-d', '--detect-only', action='store_true', help="only detect; errorlevel 0 if detected, 1 if not")
+    parser.add_argument('--clip', action='store_true', help="Destructively clip the file to the header")
 
     args = parser.parse_args()
     _main(args)
