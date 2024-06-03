@@ -120,13 +120,15 @@ for root, dirs, files in os.walk("./"):
         if file[0] != '.':
             scannable_files.append(path_join(root, file))
 
-re_preamble_keyvalue= re.compile(r'-\|-\s(.+?):\s*(.+)')
+re_preamble_keyvalue= re.compile(r'-\|-\s(.+?):\s*(.+?)(?=\r$)')
 
 
 #
 # scan
 #
+error_count = 0
 for path in scannable_files:
+
     out_dir = os.path.dirname(path)
     if path.startswith('./'):
         path = path[2:]
@@ -150,6 +152,8 @@ for path in scannable_files:
             print("unworkable build edge for '%s'. pyprepro only does 'ninja'" % path)
             if 'build-edge' in preamble:
                 print("got: '%s'\n" % preamble['build-edge'])
+
+            error_count += 1
             continue
 
         # generate build edge for this file's preamble
@@ -170,6 +174,9 @@ for path in scannable_files:
             print(f"  {var_line} = {preamble[var_line]}", file=f)
 
 f.close()
+
+if error_count != 0:
+    fatal("%d errors found. exiting without calling ninja" % error_count)
 
 
 if not find_arg_0param('--skip-ninja'):
