@@ -1,0 +1,68 @@
+#!/usr/bin/env python
+
+# extract or detect build edge spec
+# can be used with stdin, a file, or as an imported Python library
+
+import re
+import sys
+import argparse
+
+
+HEADER_CHUNK_BYTES = 512
+
+re_preamble_keyvalue = re.compile(r'-\|-\s(.+?):\s*(.+)')
+
+def detect_build_spec(input_data):
+    chunk = input_data.read(HEADER_CHUNK_BYTES)
+
+    match = re_preamble_keyvalue.search(chunk)
+    return match != None
+
+def extract_build_spec(input_data):
+    found_build_edge_line = False
+    started_match = False
+
+
+    buf = ''
+
+    for line in input_data:
+        match = re_preamble_keyvalue.search(line)
+        if match != None:
+            found_build_edge_line = True
+
+        if '-|-' in line and found_build_edge_line:
+            started_match = True
+        elif started_match == True:
+            break
+
+        buf += line
+
+    if not found_build_edge_line:
+        return ''
+    else:
+        return buf
+
+def _get_stream(args):
+    if args.file:
+        return open(args.file, 'r')
+    else:
+        return sys.stdin
+
+def _main(args):
+    if args.detect_only:
+        if detect_build_spec(_get_stream(args)):
+            sys.exit(0)
+        else:
+            sys.exit(1)
+
+    header = extract_build_spec(_get_stream(args))
+    print(header, end='')
+    sys.exit(0)
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description="Process a file or standard input.")
+    parser.add_argument('file', nargs='?', help="The file to process. If not provided, stdin will be used.")
+    parser.add_argument('-d', '--detect-only', action='store_true', help="only detect; errorlevel 0 if detected, 1 if not")
+
+    args = parser.parse_args()
+    _main(args)

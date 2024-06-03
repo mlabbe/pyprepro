@@ -146,8 +146,8 @@ for path in scannable_files:
             if match:
                 preamble[match.group(1)] = match.group(2)
 
-        if 'build-edge' not in preamble or preamble['build-edge'] != 'ninja-rule':
-            print("unworkable build edge. pyprepro only does ninja-rule")
+        if 'build-edge' not in preamble or preamble['build-edge'] != 'ninja':
+            print("unworkable build edge. pyprepro only does 'ninja'")
             continue
 
         # generate build edge for this file's preamble
