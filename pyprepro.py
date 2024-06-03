@@ -4,6 +4,7 @@ import os
 import re
 import sys
 import glob
+import mimetypes
 import subprocess
 
 from os.path import join as path_join
@@ -41,12 +42,30 @@ def find_arg_0param(expected_arg):
 
 
 def get_build_edge_preamble(path):
-    with open(path, "rb") as f:
-        try:
-            head = f.read(512).decode('utf-8')
-        except UnicodeDecodeError:
+    try:
+        with open(path, "rb") as f:
+            try:
+                head = f.read(512).decode('utf-8')
+            except UnicodeDecodeError:
+                # likely binary
+                return None
+
+            return head
+
+    except PermissionError:
+        # permission denied on likely non-text files is a non-issue
+        mime_type, _ = mimetypes.guess_type(path)
+        if mime_type == None:
+            # unguessable, warn only
+            print("pyprepro permission denied: unable to guess mime type for file '%s'" % path, file=sys.stderr)
             return None
-        return head
+
+        if mime_type.startswith("text/"):
+            fatal("permission denied reading file '%s'" % path)
+
+        # it's likely a binary, so just continue
+        return None
+
 
 def get_in_files_from_preamble_in_line(in_line, root_dir, out_dir, src_path):
     file_list = []
