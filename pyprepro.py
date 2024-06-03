@@ -48,7 +48,7 @@ def get_build_edge_preamble(path):
             return None
         return head
 
-def get_in_files_from_preamble_in_line(in_line, root_dir, out_dir):
+def get_in_files_from_preamble_in_line(in_line, root_dir, out_dir, src_path):
     file_list = []
     for entry in in_line.split():
         # entries can be relative to the ninja root, or relative to the out file
@@ -59,7 +59,7 @@ def get_in_files_from_preamble_in_line(in_line, root_dir, out_dir):
 
         globbed_paths = glob.glob(glob_path)
         if len(globbed_paths) == 0:
-            fatal("glob_path resulted in no files: %s" % glob_path)
+            fatal("glob_path resulted in no files: '%s' for path '%s'" % (glob_path, src_path))
 
         for path in glob.glob(glob_path):
             relative_path = resolve_relative_path(root_dir, path)
@@ -148,10 +148,12 @@ for path in scannable_files:
 
         if 'build-edge' not in preamble or preamble['build-edge'] != 'ninja':
             print("unworkable build edge for '%s'. pyprepro only does 'ninja'" % path)
+            if 'build-edge' in preamble:
+                print("got: '%s'\n" % preamble['build-edge'])
             continue
 
         # generate build edge for this file's preamble
-        in_files = get_in_files_from_preamble_in_line(preamble['in'], root_dir, out_dir)
+        in_files = get_in_files_from_preamble_in_line(preamble['in'], root_dir, out_dir, path)
         if len(in_files) == 0:
             print("Warning: %s in line produced 0 files", path)
 
@@ -171,5 +173,10 @@ f.close()
 
 
 if not find_arg_0param('--skip-ninja'):
-    cp = subprocess.run(['ninja'])
+    verbose_arg = ''
+    cmd = ['ninja']
+    if find_arg_0param('-v'):
+        cmd.append('-v')
+
+    cp = subprocess.run(cmd)
     sys.exit(cp.returncode)
