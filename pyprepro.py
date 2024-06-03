@@ -4,6 +4,7 @@ import os
 import re
 import sys
 import glob
+import subprocess
 
 from os.path import join as path_join
 
@@ -19,8 +20,7 @@ build_rules = {
         'description': 'grain generating $out file from $in',
     },
     'tpl': {
-        # todo: support empty vars and --name
-        'command': 'tpl --preserve-preamble --name main.go.tmpl $in -o $out $vars_args',
+        'command': 'tpl --preserve-preamble $in -o $out $flags',
         'description': 'tpl generating $out',
     },
 }
@@ -31,6 +31,14 @@ build_filename = './build.ninja'
 def fatal(msg):
     print("fatal: " + msg, file=sys.stderr)
     sys.exit(1)
+
+def find_arg_0param(expected_arg):
+    for arg in sys.argv:
+        if arg == expected_arg:
+            return True
+
+    return False
+
 
 def get_build_edge_preamble(path):
     with open(path, "rb") as f:
@@ -159,32 +167,9 @@ for path in scannable_files:
             
             print(f"  {var_line} = {preamble[var_line]}", file=f)
 
-        # hack: handle tpl edge case, where vars is a list of paths relative to $out
-        # but need to be '-i <path>', where path is relative to root
-        if preamble['rule'] == 'tpl' and var_line in preamble['vars']:
-
-            out_dir = os.path.dirname(path)
-            var_line = ''
-            for vars_file in preamble['vars'].split(' '):
-
-                # vars can be relative to the ninja root, or relative to the out file
-                if vars_file.startswith('$root'):
-                    vars_path = root_dir + vars_file[5:]
-                else:
-                    vars_path = path_join(out_dir, vars_file)
-
-                relative_var_file = resolve_relative_path(root_dir, vars_path)
-                if relative_var_file == None:
-                    # possibly we want files not under build root in the future? seems
-                    # janky.
-                    fatal("%s tpl has a var not under build root: %s" % (path, vars_file))
-
-                if not os.path.isfile(relative_var_file):
-                    fatal("%s tpl var file not found: %s" % (path, vars_file))
-
-
-                # vars files needs --vars for each one
-                var_line += ' --input-vars ' + relative_var_file
-            print(f"  vars_args = {var_line} ", file=f)
-
 f.close()
+
+
+if not find_arg_0param('--skip-ninja'):
+    cp = subprocess.run(['ninja'])
+    sys.exit(cp.returncode)
