@@ -120,7 +120,7 @@ for root, dirs, files in os.walk("./"):
         if file[0] != '.':
             scannable_files.append(path_join(root, file))
 
-re_preamble_keyvalue= re.compile(r'-\|-\s(.+?):\s*(.+?)(?=\r$)')
+re_preamble_keyvalue= re.compile(r'-\|-\s(.+?):\s*(.+)')
 
 
 #
@@ -146,7 +146,7 @@ for path in scannable_files:
         for line in head.split('\n'):
             match = re_preamble_keyvalue.search(line)
             if match:
-                preamble[match.group(1)] = match.group(2)
+                preamble[match.group(1).rstrip()] = match.group(2).rstrip()
 
         if 'build-edge' not in preamble or preamble['build-edge'] != 'ninja':
             print("unworkable build edge for '%s'. pyprepro only does 'ninja'" % path)
