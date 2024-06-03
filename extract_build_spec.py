@@ -56,11 +56,14 @@ def _main(args):
             sys.exit(1)
 
     header = extract_build_spec(_get_stream(args))
+    if header == '':
+        print("no build specification found", file=sys.stderr)
+        sys.exit(1)
     print(header, end='')
     sys.exit(0)
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description="Process a file or standard input.")
+    parser = argparse.ArgumentParser(description="Extract header including build spec from stream or file")
     parser.add_argument('file', nargs='?', help="The file to process. If not provided, stdin will be used.")
     parser.add_argument('-d', '--detect-only', action='store_true', help="only detect; errorlevel 0 if detected, 1 if not")
 
