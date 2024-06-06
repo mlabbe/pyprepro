@@ -21,8 +21,8 @@ build_rules = {
         'description': 'grain generating $out file from $in',
     },
     'tpl': {
-        'command': 'tpl --preserve-preamble $in -o $out $flags',
-        'description': 'tpl generating $out',
+        'command': 'tpl --preserve-preamble --trusted $in $flags -o $out',
+        'description': 'tpl $out',
     },
 }
 
@@ -126,7 +126,7 @@ for rule in build_rules:
         print("  %s = %s" % (item, value), file=f)
     print("\n", file=f)
 
-print("# end rules\n", file=f)
+print("# end rules", file=f)
 
 #
 # get scannable files
@@ -147,7 +147,6 @@ re_preamble_keyvalue= re.compile(r'-\|-\s(.+?):\s*(.+)')
 #
 error_count = 0
 for path in scannable_files:
-
     out_dir = os.path.dirname(path)
     if path.startswith('./'):
         path = path[2:]
@@ -180,7 +179,7 @@ for path in scannable_files:
         if len(in_files) == 0:
             print("Warning: %s in line produced 0 files", path)
 
-        print(f"build {path}: {preamble['rule']} {' '.join(in_files)} | {build_filename}", file=f)
+        print(f"\nbuild {path}: {preamble['rule']} {' '.join(in_files)} | {build_filename}", file=f)
 
         # create ninja build variables out of any other build spec
         # lines not used above
