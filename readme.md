@@ -5,9 +5,9 @@ Barebones experimental program.
 Create a ninja.build file from build edges.  For example, if foo.c
 starts with:
 
-    // -|- build-edge: ninja
-    // -|- rule: grc
-    // -|- in: grain/struct.gen grain/def.gr
+    // || build-edge: ninja
+    // || rule: grc
+    // || in: grain/struct.gen grain/def.gr
 
 This creates a ninja build edge line referencing rule type 'grc' that
 targets foo.c as an output.  
@@ -29,21 +29,21 @@ The ninja build rule to invoke in order to generate this file.  The supported op
 One or more 'in' lines is required.  Each line contains one file that
 is needed to build.
 
-    // -|- in: message.tmpl
-    // -|- in: vars.toml
+    // || in: message.tmpl
+    // || in: vars.toml
 
 
 ### set ###
 
 Given a line like:
 
-    // -|- set: foo = bar
+    // || set: foo = bar
     
 Create a variable %foo that is interpolated in 'in' lines.
 
 It is possible to use variables to generate variables
 
-    // -|- set: src_dir = ../src
-    // -|- set: tmpl_dir = %src_dir/tmpl
+    // || set: src_dir = ../src
+    // || set: tmpl_dir = %src_dir/tmpl
 
 Note that I wanted to use '$' instead of '%' but that conflicts with ninja build variables.

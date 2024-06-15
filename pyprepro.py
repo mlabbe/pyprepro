@@ -9,7 +9,7 @@ import subprocess
 
 from os.path import join as path_join
 
-MAGIC_STR = '-|- build-edge:'
+MAGIC_STR = '|| build-edge:'
 COMMON_RESERVED_KEYS = ('build-edge', 'rule', 'in', 'set')
 VAR_DELIMITER = '%'
 
@@ -21,20 +21,14 @@ build_rules = {
     'grc': {
         'command': 'grc --preserve-preamble $in -o $out',
         'description': 'grain generating $out file from $in',
-
-        'reserved': [],
     },
     'tpl': {
         'command': 'tpl --preserve-preamble --trusted $in $flags -o $out',
         'description': 'tpl $out',
-
-        # the list of keys that are not passed on to ninja directly
-        'reserved': [],
     },
 }
 
 build_filename = './build.ninja'
-
 
 def fatal(msg):
     print("fatal: " + msg, file=sys.stderr)
@@ -75,13 +69,10 @@ def get_build_edge_preamble(path):
 
 def get_all_variables_from_preamble(preamble, path, root_dir):
 
+    vars = {'root': root_dir}
     if 'set' not in preamble:
-        return {}
+        return vars
 
-
-    vars = {}
-    # add in special var 'root'
-    vars['root'] = root_dir
 
     # find all set lines, and create a dictionary of their key/values
     for set_line in preamble['set']:
@@ -153,6 +144,12 @@ def get_in_files_from_preamble_in_line(in_lines, vars, out_dir, src_path):
 
         glob_path = parse_dollarsign_vars(entry, vars, src_path)
 
+        # if it's not an absolute path, read it as relative to the
+        # file containing the build spec
+        if not os.path.isabs(glob_path):
+            glob_path = path_join(out_dir, glob_path)
+
+
         globbed_paths = glob.glob(glob_path)
         if len(globbed_paths) == 0:
             fatal("glob_path resulted in no files: '%s' for path '%s'" % (glob_path, src_path))
@@ -188,7 +185,11 @@ def resolve_relative_path(root_dir, relative):
         # return bar/baz.txt
         return os.path.relpath(relative_abs, root_dir)
     else:
-        return None
+        # relative abs is not under root_dir
+        relative_to_common = os.path.relpath(relative_abs, start=root_dir)
+        relative_to_common = os.path.abspath(relative_to_common)
+        print("relative to common: " + relative_to_common)
+        return relative_to_common
 
 #
 # generate ninja.build
@@ -216,7 +217,7 @@ for root, dirs, files in os.walk("./"):
         if file[0] != '.':
             scannable_files.append(path_join(root, file))
 
-re_preamble_keyvalue= re.compile(r'-\|-\s(.+?):\s*(.+)')
+re_preamble_keyvalue= re.compile(r'\|\|\s(.+?):\s*(.+)')
 
 
 #
@@ -237,7 +238,7 @@ for path in scannable_files:
 
         preamble = {}
 
-        # hacky: will continue amalgamating -|- lines even after a space
+        # hacky: will continue amalgamating '||' lines even after a space
         for line in head.split('\n'):
             match = re_preamble_keyvalue.search(line)
             if match:
@@ -272,10 +273,6 @@ for path in scannable_files:
         for var_line in sorted(preamble.keys()):
             # common reserved words
             if var_line in COMMON_RESERVED_KEYS: continue
-
-            # build type reserved words
-            reserved_words = build_rules[preamble['rule'][0]]['reserved']
-            if var_line in reserved_words: continue
 
             # not a reserved word, pass it on as a ninja variable
 
