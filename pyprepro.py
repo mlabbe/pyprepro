@@ -46,7 +46,7 @@ def get_build_edge_preamble(path):
     try:
         with open(path, "rb") as f:
             try:
-                head = f.read(512).decode('utf-8')
+                head = f.read(4096).decode('utf-8')
             except UnicodeDecodeError:
                 # likely binary
                 return None
